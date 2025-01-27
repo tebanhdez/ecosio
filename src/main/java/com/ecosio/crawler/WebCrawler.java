@@ -1,17 +1,9 @@
 package com.ecosio.crawler;
 
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class WebCrawler {
@@ -30,36 +22,11 @@ public class WebCrawler {
     Logger logger = Logger.getLogger(WebCrawler.class.getName());
     BlockingQueue<CompletableFuture<Void>> queue = new LinkedBlockingQueue<>();
 
-    private Set<String> extractLinks(String htmlContent) {
-        Set<String> links = new HashSet<>();
-        String regex = "<a\\s+(?:[^>]*?\\s+)?href=\"([^\"]*)\"";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(htmlContent);
-
-        while (matcher.find()) {
-            String link = matcher.group(1);
-            if (link.startsWith("/")) {
-                link = uri.getHost() + link;
-            }
-            links.add(link);
-        }
-        return links;
-    }
-
-    private boolean isSameHost(String url) {
-        try {
-            String _hostUri = uri.getHost();
-            URI uri = new URI(url);
-            return uri.getHost() != null && uri.getHost().endsWith(_hostUri);
-        } catch (URISyntaxException e) {
-            return false;
-        }
-    }
     public void crawl() {
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
 
             Runnable taskProducer = () -> {
-                CompletableFuture<Void> future = CompletableFuture.supplyAsync(() -> traverseWebsite(uri, executor, queue, 0), executor);
+                CompletableFuture<Void> future = CompletableFuture.runAsync(new Worker(uri,executor, queue, maxDepth, outputSet), executor);
                 queue.add(future);
             };
 
@@ -107,37 +74,5 @@ public class WebCrawler {
                 logger.severe(e.getMessage());
             }
         }
-    }
-
-    private Void traverseWebsite(URI uri, ExecutorService executor, BlockingQueue<CompletableFuture<Void>> queue, int depth) {
-        if (depth < maxDepth) {
-            HttpResponse<String> response;
-            try (HttpClient client = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build()) {
-                HttpRequest request = HttpRequest.newBuilder().uri(uri).GET().build();
-                response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                if (response.statusCode() == 200) {
-                    String htmlContent = response.body();
-                    Set<String> links = extractLinks(htmlContent);
-                    for (String _link : links) {
-                        var link = _link.endsWith("/") ? _link.substring(0, _link.length() - 1) : _link;
-                        if (isSameHost(link) && !outputSet.contains(link)) {
-                            outputSet.add(link);
-                            CompletableFuture<Void> future = CompletableFuture.supplyAsync(() -> {
-                                try {
-                                    return traverseWebsite(new URI(link), executor, queue, depth + 1);
-                                } catch (URISyntaxException e) {
-                                    return null;
-                                }
-                            }, executor);
-                            queue.add(future);
-                        }
-                    }
-                }
-            } catch (IOException | InterruptedException e) {
-                logger.warning(e.getMessage());
-            }
-            return null;
-        }
-        return null;
     }
 }
