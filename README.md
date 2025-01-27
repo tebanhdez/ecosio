@@ -54,11 +54,11 @@ $ mvn clean compile
 The app accepts three arguments:
 1. domain: mandatory e.g. ecosio.com
 2. depth: optional depth of recursion while following the website links
-3. time out: optional general timeout to complete the overall executor.
+3. time out: optional general timeout in seconds to complete the overall executor.
 
 
 ```sh
-$ mvn clean compile exec:java -Dexec.mainClass=com.ecosio.crawler.Main -Dexec.args="ecosio.com"
+$ mvn exec:java -Dexec.mainClass=com.ecosio.crawler.Main -Dexec.args="ecosio.com"
 ```
 
 ### Sample output
@@ -80,7 +80,7 @@ INFO: Total collected links: 48
 
 Increasing depth:
 ```sh
-$ mvn clean compile exec:java -Dexec.mainClass=com.ecosio.crawler.Main -Dexec.args="ecosio.com 2"
+$ mvn exec:java -Dexec.mainClass=com.ecosio.crawler.Main -Dexec.args="ecosio.com 2"
 ...
 ://ecosio.com/it/soluzioni/integrazione-completa-erp-edi, https://ecosio.com/it/soluzioni/routing-connettivita-reti-van, https://ecosio.com/it/soluzioni/web-edi
 Jan 27, 2025 7:07:35 PM com.ecosio.crawler.WebCrawler crawl
